@@ -1,0 +1,77 @@
+services:
+
+  telegram-bot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: telegram-bot-api
+
+    restart: unless-stopped
+
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+
+    command:
+      - --api-id=${TELEGRAM_API_ID}
+      - --api-hash=${TELEGRAM_API_HASH}
+      - --local
+      - --http-port=8081
+      - --dir=/var/lib/telegram-bot-api
+
+    volumes:
+      # Telegram persistent state and local media cache
+      - ./data:/var/lib/telegram-bot-api
+
+    ports:
+      # Accessible only from DREAM-MPC itself
+      - "127.0.0.1:8081:8081"
+
+
+  media-downloader:
+    build:
+      context: ./downloader
+      dockerfile: Dockerfile
+
+    container_name: telegram-media-downloader
+
+    restart: unless-stopped
+
+    depends_on:
+      - telegram-bot-api
+
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_USER_ID: ${TELEGRAM_ALLOWED_USER_ID}
+
+      TELEGRAM_BOT_API_BASE: http://telegram-bot-api:8081
+
+      WARNING_FREE_GB: 30
+      MINIMUM_FREE_GB: 10
+      HISTORY_LIMIT: 50
+
+    volumes:
+      # Must be mounted at exactly the same container path
+      # because Telegram local mode returns absolute file paths.
+      - ./data:/var/lib/telegram-bot-api
+
+      # Jellyfin media root
+      #
+      # /media/Shows  -> C:\JellyFin\Shows
+      # /media/Movies -> C:\JellyFin\Movies
+      # /media/Music  -> C:\JellyFin\Music
+      - C:/JellyFin:/media
+
+      # Persistent downloader state
+      - media-downloader-state:/app/state
+
+      # Persistent rotating logs
+      - media-downloader-logs:/app/logs
+
+
+volumes:
+
+  media-downloader-state:
+
+  media-downloader-logs:
