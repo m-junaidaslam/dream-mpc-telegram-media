@@ -21,11 +21,12 @@ services:
       - --dir=/var/lib/telegram-bot-api
 
     volumes:
-      # Telegram persistent state and local media cache
-      - ./data:/var/lib/telegram-bot-api
+      # Native Docker volume for Telegram/TDLib state and downloads.
+      # Avoids using a Windows bind mount for TDLib's database/binlog.
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
 
     ports:
-      # Accessible only from DREAM-MPC itself
+      # Accessible only from DREAM-MPC itself.
       - "127.0.0.1:8081:8081"
 
 
@@ -52,26 +53,32 @@ services:
       HISTORY_LIMIT: 50
 
     volumes:
-      # Must be mounted at exactly the same container path
-      # because Telegram local mode returns absolute file paths.
-      - ./data:/var/lib/telegram-bot-api
+      # IMPORTANT:
+      # Same Docker volume AND same container path as telegram-bot-api.
+      # Local Bot API mode returns an absolute local file path.
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
 
-      # Jellyfin media root
+      # Jellyfin media root.
       #
       # /media/Shows  -> C:\JellyFin\Shows
       # /media/Movies -> C:\JellyFin\Movies
       # /media/Music  -> C:\JellyFin\Music
       - C:/JellyFin:/media
 
-      # Persistent downloader state
+      # Persistent downloader state.
       - media-downloader-state:/app/state
 
-      # Persistent rotating logs
+      # Persistent rotating logs.
       - media-downloader-logs:/app/logs
 
 
 volumes:
 
+  # Shared native Docker volume for Telegram Bot API / TDLib.
+  telegram-bot-api-data:
+
+  # Downloader persistent state.
   media-downloader-state:
 
+  # Downloader logs.
   media-downloader-logs:
